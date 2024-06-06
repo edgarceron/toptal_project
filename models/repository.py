@@ -54,6 +54,11 @@ class MongoRepository(AbstractRepository):
             model = await collection.find_one({"_id": ObjectId(id)})
         return model
     
+    async def get_by_field(self, match: str, collection_type: str, field: str) -> AbstractModel:
+        async with MongoConnection(collection_type) as collection:
+            model = await collection.find_one({field: match})
+        return model
+    
     async def delete(self, id: str, collection_type: str):
         async with MongoConnection(collection_type) as collection:
             delete_result = await collection.delete_one({"_id": ObjectId(id)})
