@@ -1,21 +1,5 @@
-
-
-from pydantic import BaseModel
-
-# to get a string like this run:
-# openssl rand -hex 32
-
-
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-        "disabled": False,
-    }
-}
+from pydantic import BaseModel, Field
+from .repository import AbstractModel
 
 
 class Token(BaseModel):
@@ -24,17 +8,22 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    username: str = Field(...)
 
 
-class User(BaseModel):
+class UserModel(AbstractModel):
+    @property
+    def collection(self):
+        return 'users'
+
     username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
+    email: str = Field(...)
+    full_name: str = Field(...)
+    disabled: bool = Field(...)
 
 
-class UserInDB(User):
-    hashed_password: str
+class UserInDB(UserModel):
+    hashed_password: str = Field(...)
+
 
 
