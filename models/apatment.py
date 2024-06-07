@@ -21,7 +21,10 @@ class ApartmentModel(AbstractModel):
     price: float = Field(...)
     bedrooms: int = Field(...)
     dateadded: str = Field(...)
-    
+
+class ApartmentInput(ApartmentModel):
+    image: bytes = Field(...)
+
 
 class ApartmentCollection(BaseModel):
     apartments: List[ApartmentModel]

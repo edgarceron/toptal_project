@@ -18,6 +18,14 @@ def mock_model():
     my_mock = MyModel(someprop="Someinfo")
     return my_mock
 
+@pytest.fixture
+def mock_file():
+    my_file = repository.FileModel(
+    file_name = "myfile",
+    data = b"Hello world"
+    )
+    return my_file
+
 @pytest.mark.asyncio
 async def test_add(mock_model: MyModel):
     repo = repository.MongoRepository()
@@ -25,3 +33,11 @@ async def test_add(mock_model: MyModel):
     print(result)
     assert result is not None
     await repo.delete(mock_model.id, mock_model.collection)
+
+@pytest.mark.asyncio
+async def test_add_file(mock_file: repository.FileModel):
+    repo = repository.GridFSRepository()
+    await repo.add(mock_file)
+    file = await repo.find(mock_file.file_name) 
+    assert file is not None
+    assert file.data == mock_file.data
