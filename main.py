@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, Body, status, Depends, HTTPException
 
-from .models.apatment import ApartmentModel, ApartmentCollection
+from .models.apartments import ApartmentInput, ApartmentCollection
 from .models.users import UserModel, UserCreate, Token, UserType
 from .services.users import UserService
 from .services.apartment import AparmentService
@@ -19,23 +19,45 @@ def read_root():
 
 @app.post(
     "/apartment/",
-    response_description="Add new student",
-    response_model=ApartmentModel,
+    response_description="Add new apartment",
+    response_model=ApartmentInput,
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
 )
 async def create_apatment(
     current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
-    apartment: ApartmentModel = Body(...),
+    apartment: ApartmentInput = Body(...),
 ):
     if current_user.user_type == UserType.realtor:
-        created_apartment = AparmentService.create_apartment(apartment=apartment)
+        created_apartment = AparmentService.create_apartment(apartment=apartment, user_name=current_user.username)
         return created_apartment
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only realtor could create apartments"
         )
+
+@app.patch(
+    "/apartment/{id}",
+    response_description="Update apartment",
+    response_model=ApartmentInput,
+    status_code=status.HTTP_201_CREATED,
+    response_model_by_alias=False,
+)
+async def update_apatment(
+    current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
+    id: str,
+    apartment: ApartmentInput = Body(...),
+):
+    if current_user.user_type == UserType.realtor:
+        created_apartment = AparmentService.update_apartment(id=id, user_name=current_user.username, apartment=apartment)
+        return created_apartment
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only realtor could create apartments"
+        )
+
 
 @app.post(
     "/user/",

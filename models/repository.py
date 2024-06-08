@@ -3,8 +3,10 @@ from pydantic import BaseModel
 import motor.motor_asyncio
 from motor.motor_gridfs import AgnosticGridFSBucket
 from bson import ObjectId
+from typing import Optional
 from typing_extensions import Annotated
 from pydantic.functional_validators import BeforeValidator
+from pymongo import ReturnDocument
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -27,9 +29,6 @@ class AbstractRepository(abc.ABC):
     def add(self, model: AbstractModel):
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def get(self, id: ObjectId) -> AbstractModel:
-        raise NotImplementedError
 
 
 class MongoConnection:
@@ -71,12 +70,12 @@ class MongoRepository(AbstractRepository):
             )
         return created
 
-    async def get(self, id: str, collection_type: str) -> AbstractModel:
+    async def get(self, id: str, collection_type: str) -> Optional[dict]:
         async with MongoConnection(collection_type) as collection:
             model = await collection.find_one({"_id": ObjectId(id)})
         return model
     
-    async def get_by_field(self, match: str, collection_type: str, field: str) -> AbstractModel:
+    async def get_by_field(self, match: str, collection_type: str, field: str) -> Optional[dict]:
         async with MongoConnection(collection_type) as collection:
             model = await collection.find_one({field: match})
         return model
@@ -85,16 +84,33 @@ class MongoRepository(AbstractRepository):
         async with MongoConnection(collection_type) as collection:
             delete_result = await collection.delete_one({"_id": ObjectId(id)})
         return delete_result.deleted_count
+    
+    async def find_one_and_update(self, id: str, model: AbstractModel) -> Optional[dict]:
+        updates = {
+            k: v for k, v in model.model_dump(by_alias=True).items() if v is not None
+        }
+        if len(updates) == 0: 
+            return None
+        async with MongoConnection(model.collection) as collection:
+            update_result = await collection.find_one_and_update(
+                {"_id": ObjectId(id)},
+                {"$set": updates},
+                return_document=ReturnDocument.AFTER,
+            )
+            return update_result
+
+    async def filter(collection_type: str, query: dict, page: int, per_page: int = 100):
+        offset = (page - 1) * per_page
+        async with MongoConnection(collection_type) as collection:
+            result = await collection.find(query).skip(offset).limit(per_page)
+        return result.to_list()
 
 
 class GridFSRepository(AbstractRepository):
-    def get(self, id: ObjectId) -> AbstractModel:
-        ...
-
     async def add(self, model: FileModel):
         async with MongoGridFSConnection() as fs:
             async with fs.open_upload_stream(
-                model.file_name, metadata={"contentType": "text/plain"}
+                model.file_name
             ) as grid_in:
                 await grid_in.write(model.data)
                 
@@ -104,6 +120,7 @@ class GridFSRepository(AbstractRepository):
             cursor = fs.find({"filename": file_name}, no_cursor_timeout=True)
             async for grid_out in cursor:
                 data = grid_out.read()
+                print(data)
                 return FileModel(
                     file_name=file_name,
                     data=data

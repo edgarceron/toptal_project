@@ -21,7 +21,7 @@ class UserModel(AbstractModel):
     def collection(self):
         return 'users' 
 
-    username: str
+    user_name: str
     email: str = Field(...)
     full_name: str = Field(...)
     disabled: bool = Field(...)
@@ -38,10 +38,10 @@ class UserInDB(UserModel):
 
 class UserCreate(UserModel):
     password: str = Field(...)
-    
+
     def to_userdb(self, hashed_password: str) -> UserInDB:
         return UserInDB(
-            username=self.username,
+            user_name=self.user_name,
             email=self.email,
             full_name=self.full_name,
             user_type=self.user_type.value,

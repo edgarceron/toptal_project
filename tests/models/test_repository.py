@@ -21,8 +21,8 @@ def mock_model():
 @pytest.fixture
 def mock_file():
     my_file = repository.FileModel(
-    file_name = "myfile",
-    data = b"Hello world"
+        file_name = "myfile",
+        data = b"Hello world"
     )
     return my_file
 
