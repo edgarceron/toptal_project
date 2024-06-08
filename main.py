@@ -1,13 +1,14 @@
 
+from typing import Annotated
 from fastapi import FastAPI, Body, status, Depends, HTTPException
-
-from .models.apartments import ApartmentInput, ApartmentCollection
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import Response
+from .models.apartments import ApartmentInput, ApartmentInDB, ApartmentCollection
 from .models.users import UserModel, UserCreate, Token, UserType
 from .services.users import UserService
 from .services.apartment import AparmentService
 from .security.auth import Auth
-from typing import Annotated
-from fastapi.security import OAuth2PasswordRequestForm
+
 
 MONGODB_URL = "mongodb://root:example@127.0.0.1:27017"
 app = FastAPI()
@@ -20,7 +21,7 @@ def read_root():
 @app.post(
     "/apartment/",
     response_description="Add new apartment",
-    response_model=ApartmentInput,
+    response_model=ApartmentInDB,
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
 )
@@ -58,6 +59,44 @@ async def update_apatment(
             detail="Only realtor could create apartments"
         )
 
+@app.get(
+    "/apartment/{id}",
+    response_description="Update apartment",
+    response_model=ApartmentInDB,
+    status_code=status.HTTP_201_CREATED,
+    response_model_by_alias=False,
+)
+async def get_apatment(
+    current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
+    id: str,
+):
+    if current_user is not None:
+        apartment = AparmentService.read_apartment(id)
+        return apartment
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only authenticated users could see apartments"
+        )
+
+
+@app.delete(
+    "/apartment/{id}",
+    response_description="Delete apartment"
+)
+async def delete_apatment(
+    current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
+    id: str,
+):
+    if current_user is not None:
+        delete_result = AparmentService.delete_apartment(id, current_user.user_name)
+        if delete_result:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only authenticated users could see apartments"
+        )
 
 @app.post(
     "/user/",
@@ -92,8 +131,15 @@ async def read_users_me(
 ):
     return current_user
 
-@app.get("/users/me/apartments/")
+@app.get("/users/me/apartments/{page}")
 async def read_own_items(
     current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
+    page: int = 1
 ):
-    return [{"item_id": "Foo", "owner": current_user.username}]
+    if current_user.user_type == UserType.realtor:
+        return AparmentService.list_apartments(current_user.user_name, page)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only realtor could list apartments"
+        )

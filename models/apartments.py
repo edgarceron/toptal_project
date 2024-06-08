@@ -1,9 +1,21 @@
 
-from pydantic import ConfigDict, BaseModel, Field
+from enum import Enum
+from pydantic import BaseModel, Field
 from typing import Optional, List, Union
 from .repository import AbstractModel, PyObjectId
 # Represents an ObjectId field in the database.
 # It will be represented as a `str` on the model so that it can be serialized to JSON.
+
+class RadiusUnit(Enum):
+    km = "km"
+    mi = "mi"
+
+class GeospatialApartmentSearch(AbstractModel):
+    radius: float = Field(...)
+    lat: float = Field(...)
+    lon: float = Field(...)
+    radius_unit: RadiusUnit = Field(...)
+    page: int = Field(...)
 
 
 class ApartmentModel(AbstractModel):
@@ -33,17 +45,17 @@ class ApartmentUpdate(AbstractModel):
     price: Optional[float] = Field(...)
     bedrooms: Optional[int] = Field(...)
     image: Optional[bytes] = Field(...)
-    image_name: Optional[bytes] = Field(...)
+    image_id: Optional[bytes] = Field(...)
 
 
 class ApartmentInDB(ApartmentModel):
-    image_name: str = Field(...)
+    image_id: str = Field(...)
     realtor: str = Field(...)
 
 class ApartmentInput(ApartmentModel):
     image: bytes = Field(...)
 
-    def to_apartment_in_db(self, user_name: str, image_name: str):
+    def to_apartment_in_db(self, user_name: str, image_id: str):
         return ApartmentInDB(
             title=self.title,
             description=self.description,
@@ -51,11 +63,11 @@ class ApartmentInput(ApartmentModel):
             price=self.price,
             bedrooms=self.bedrooms,
             dateadded=self.dateadded,
-            image_name=image_name,
+            image_id=image_id,
             realtor=user_name
         )
 
 
 class ApartmentCollection(BaseModel):
-    apartments: List[ApartmentModel]
+    apartments: List[ApartmentInDB]
 

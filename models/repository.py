@@ -1,5 +1,5 @@
 import abc
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import motor.motor_asyncio
 from motor.motor_gridfs import AgnosticGridFSBucket
 from bson import ObjectId
@@ -20,7 +20,7 @@ class FileModel(AbstractModel):
     @property
     def collection(self):
         return 'files' 
-    file_name: str
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     data: bytes
 
 
@@ -109,20 +109,22 @@ class MongoRepository(AbstractRepository):
 class GridFSRepository(AbstractRepository):
     async def add(self, model: FileModel):
         async with MongoGridFSConnection() as fs:
-            async with fs.open_upload_stream(
-                model.file_name
+            async with fs.open_upload_stream_with_id(
+                model.id,
             ) as grid_in:
                 await grid_in.write(model.data)
                 
 
-    async def find(self, file_name: str) -> FileModel:
+    async def get(self, id: str) -> FileModel:
         async with MongoGridFSConnection() as fs:
-            cursor = fs.find({"filename": file_name}, no_cursor_timeout=True)
-            async for grid_out in cursor:
-                data = grid_out.read()
-                print(data)
-                return FileModel(
-                    file_name=file_name,
-                    data=data
-                )
-            
+            grid_out = await fs.open_download_stream({"_id": ObjectId(id)})
+            contents = await grid_out.read()
+            return FileModel(
+                id=ObjectId(id),
+                data=contents
+            )
+
+    async def delete(self, id: str) -> int:
+        async with MongoGridFSConnection() as fs:
+            delete_result = await fs.delete(ObjectId(id))
+            return delete_result.deleted_count
