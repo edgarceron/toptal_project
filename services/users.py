@@ -7,7 +7,7 @@ class UserService():
     @staticmethod
     async def get_user(username: str) -> users.UserInDB:
         repo = MongoRepository()
-        user_dict = await repo.get_by_field(match=username, collection_type='users', field='username')
+        user_dict = await repo.get_by_field(match=username, collection_type='users', field='user_name')
         result = users.UserInDB(**user_dict)
         return result
     

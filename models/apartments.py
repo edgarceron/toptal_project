@@ -31,7 +31,6 @@ class ApartmentModel(AbstractModel):
     price: float = Field(...)
     bedrooms: int = Field(...)
     dateadded: str = Field(...)
-    realtor: str = Field(...)
 
 class ApartmentUpdate(AbstractModel):
     @property
@@ -49,6 +48,7 @@ class ApartmentUpdate(AbstractModel):
 
 class ApartmentInDB(ApartmentModel):
     image_id: str = Field(...)
+    realtor: str = Field(...)
 
 class ApartmentInput(ApartmentModel):
     image: bytes = Field(...)
