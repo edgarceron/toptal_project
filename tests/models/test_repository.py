@@ -1,7 +1,9 @@
 import pytest
+import uuid
 from ...models import repository
 from pydantic import Field
 from typing import Optional
+from bson.objectid import ObjectId
 
 pytest_plugins = ('pytest_asyncio',)
 
@@ -21,8 +23,7 @@ def mock_model():
 @pytest.fixture
 def mock_file():
     my_file = repository.FileModel(
-        file_name = "myfile",
-        data = b"Hello world"
+        data=b"Hello world"
     )
     return my_file
 
@@ -37,7 +38,8 @@ async def test_add(mock_model: MyModel):
 @pytest.mark.asyncio
 async def test_add_file(mock_file: repository.FileModel):
     repo = repository.GridFSRepository()
-    await repo.add(mock_file)
-    file = await repo.find(mock_file.file_name) 
+    file_id = await repo.add(mock_file)
+    file = await repo.get(str(file_id))
     assert file is not None
     assert file.data == mock_file.data
+    await repo.delete(file_id)

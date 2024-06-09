@@ -1,4 +1,5 @@
 import abc
+from uuid import uuid4
 from pydantic import BaseModel, Field
 import motor.motor_asyncio
 from motor.motor_gridfs import AgnosticGridFSBucket
@@ -107,17 +108,18 @@ class MongoRepository(AbstractRepository):
 
 
 class GridFSRepository(AbstractRepository):
-    async def add(self, model: FileModel):
+    async def add(self, model: FileModel) -> ObjectId:
         async with MongoGridFSConnection() as fs:
-            async with fs.open_upload_stream_with_id(
-                model.id,
-            ) as grid_in:
-                await grid_in.write(model.data)
-                
+            file_id = await fs.upload_from_stream(
+                str(uuid4()),
+                model.data)
+            return file_id
 
     async def get(self, id: str) -> FileModel:
         async with MongoGridFSConnection() as fs:
-            grid_out = await fs.open_download_stream({"_id": ObjectId(id)})
+            print("Reading")
+            print(id)
+            grid_out = await fs.open_download_stream(ObjectId(id))
             contents = await grid_out.read()
             return FileModel(
                 id=ObjectId(id),
@@ -126,5 +128,5 @@ class GridFSRepository(AbstractRepository):
 
     async def delete(self, id: str) -> int:
         async with MongoGridFSConnection() as fs:
-            delete_result = await fs.delete(ObjectId(id))
-            return delete_result.deleted_count
+            await fs.delete(ObjectId(id))
+            

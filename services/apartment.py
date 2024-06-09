@@ -10,7 +10,6 @@ class AparmentService():
     @staticmethod
     def _get_file_model(image: bytes):
         file = FileModel(
-            id=ObjectId(),
             data=image
         )
         return file
@@ -20,9 +19,9 @@ class AparmentService():
         repository = MongoRepository()
         file_repository = GridFSRepository()
         file = AparmentService._get_file_model(apartment.image)
-        file_repository.add(file)
+        file_id = file_repository.add(file)
 
-        created_apartment = await repository.add(apartment.to_apartment_in_db(user_name, file.id))
+        created_apartment = await repository.add(apartment.to_apartment_in_db(user_name, file_id))
         response_apartment = apartments.ApartmentModel(**created_apartment)
         return response_apartment
     
@@ -44,8 +43,8 @@ class AparmentService():
         if apartment.image is not None:
             file_repository = GridFSRepository()
             file = AparmentService._get_file_model(apartment.image)
-            file_repository.add(file)
-            apartment.image_id = file.id
+            file_id = file_repository.add(file)
+            apartment.image_id = file_id
         del apartment.image
         updated_apartment = await repository.find_one_and_update(
             id=id,
@@ -76,13 +75,9 @@ class AparmentService():
             page=page
         )
         return apartments.ApartmentCollection(results)
-
-
+    
     @staticmethod
-    async def list_apartments_by_radius(
-        geo_search: apartments.GeospatialApartmentSearch, 
-    ) -> apartments.ApartmentCollection:
-        repository = MongoRepository()
+    def _get_geo_query_dict(geo_search: apartments.GeospatialApartmentSearch):
         miles_to_meters = 1609.34
         kilometers_to_meters = 1000
         if geo_search.radius_unit == apartments.RadiusUnit.mi:
@@ -91,7 +86,6 @@ class AparmentService():
             radius_in_meters = geo_search.radius * kilometers_to_meters
         else:
             raise ValueError("Unsupported unit. Use 'miles' or 'kilometers'.")
-        
         query = {
             "location": {
                 "$near": {
@@ -103,6 +97,14 @@ class AparmentService():
                 }
             }
         }
+        return query
+
+    @staticmethod
+    async def list_apartments_by_radius(
+        geo_search: apartments.GeospatialApartmentSearch, 
+    ) -> apartments.ApartmentCollection:
+        repository = MongoRepository()
+        query = AparmentService._get_geo_query_dict(geo_search)
         results = await repository.filter(
             collection_type=AparmentService.DEFAULT_COLLECTION,
             query=query,
