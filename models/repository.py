@@ -3,6 +3,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 import motor.motor_asyncio
 from motor.motor_gridfs import AgnosticGridFSBucket
+from gridfs.errors import NoFile
 from bson import ObjectId
 from typing import Optional
 from typing_extensions import Annotated
@@ -100,11 +101,12 @@ class MongoRepository(AbstractRepository):
             )
             return update_result
 
-    async def filter(collection_type: str, query: dict, page: int, per_page: int = 100):
+    async def filter(self, collection_type: str, query: dict, page: int, per_page: int = 100):
         offset = (page - 1) * per_page
         async with MongoConnection(collection_type) as collection:
-            result = await collection.find(query).skip(offset).limit(per_page)
-        return result.to_list()
+            result = collection.find(query).skip(offset).limit(per_page)
+            my_list = await result.to_list(1000)
+        return my_list
 
 
 class GridFSRepository(AbstractRepository):
@@ -127,6 +129,9 @@ class GridFSRepository(AbstractRepository):
             )
 
     async def delete(self, id: str) -> int:
-        async with MongoGridFSConnection() as fs:
-            await fs.delete(ObjectId(id))
-            
+        try:
+            async with MongoGridFSConnection() as fs:
+                await fs.delete(ObjectId(id))
+                return 1
+        except(NoFile):
+            return 0

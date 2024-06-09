@@ -30,7 +30,7 @@ async def create_apatment(
     apartment: ApartmentInput = Body(...),
 ):
     if current_user.user_type == UserType.realtor:
-        created_apartment = AparmentService.create_apartment(apartment=apartment, user_name=current_user.username)
+        created_apartment = AparmentService.create_apartment(apartment=apartment, user_name=current_user.user_name)
         return created_apartment
     else:
         raise HTTPException(
@@ -51,7 +51,7 @@ async def update_apatment(
     apartment: ApartmentInput = Body(...),
 ):
     if current_user.user_type == UserType.realtor:
-        created_apartment = AparmentService.update_apartment(id=id, user_name=current_user.username, apartment=apartment)
+        created_apartment = AparmentService.update_apartment(id=id, user_name=current_user.user_name, apartment=apartment)
         return created_apartment
     else:
         raise HTTPException(

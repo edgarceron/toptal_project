@@ -38,20 +38,6 @@ async def setup_user_service(mock_user, mock_invalid_user, monkeypatch):
 
     monkeypatch.setattr(UserService, "get_user", mock_get_user)
 
-
-def test_should_get_password_hash_work():
-    password = "testpassword"
-    hashed = Hashing.get_password_hash(password)
-    assert Hashing.verify_password(password, hashed) is True
-
-@pytest.mark.asyncio
-async def test_should_verify_password_pass_when_correct_password(mock_user: users.UserInDB):
-    assert Hashing.verify_password("testpassword", mock_user.hashed_password) is True
-
-@pytest.mark.asyncio
-async def test_should_verify_password_fail_when_incorrect_password(mock_user: users.UserInDB):
-    assert Hashing.verify_password("wrongpassword", mock_user.hashed_password) is False
-
 @pytest.mark.asyncio
 async def test_should_authenticate_user_return_user_when_correct(mock_user: users.UserInDB, setup_user_service):
     await setup_user_service

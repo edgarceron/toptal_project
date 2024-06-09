@@ -1,9 +1,7 @@
 import pytest
-import uuid
 from ...models import repository
 from pydantic import Field
 from typing import Optional
-from bson.objectid import ObjectId
 
 pytest_plugins = ('pytest_asyncio',)
 
