@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from .repository import AbstractModel, PyObjectId
 
@@ -22,7 +22,7 @@ class UserModel(AbstractModel):
         return 'users' 
 
     user_name: str
-    email: str = Field(...)
+    email: EmailStr = Field(...)
     full_name: str = Field(...)
     disabled: bool = Field(...)
     user_type: UserType = Field(...)
@@ -38,6 +38,24 @@ class UserInDB(UserModel):
 
 class UserCreate(UserModel):
     password: str = Field(...)
+
+    @field_validator('user_name')
+    def user_name_length(cls, value):
+        if not (3 <= len(value) <= 50):
+            raise ValueError('user_name must be between 3 and 50 characters')
+        return value
+
+    @field_validator('password')
+    def password_complexity(cls, value):
+        if len(value) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(char.isdigit() for char in value):
+            raise ValueError('Password must contain at least one digit')
+        if not any(char.isupper() for char in value):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(char.islower() for char in value):
+            raise ValueError('Password must contain at least one lowercase letter')
+        return value
 
     def to_userdb(self, hashed_password: str) -> UserInDB:
         return UserInDB(

@@ -72,6 +72,8 @@ async def get_apatment(
 ):
     if current_user is not None:
         apartment = await AparmentService.read_apartment(id)
+        if apartment is None:
+             return Response(status_code=status.HTTP_404_NOT_FOUND)
         return apartment
     else:
         raise HTTPException(

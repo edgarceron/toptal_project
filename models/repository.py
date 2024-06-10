@@ -5,10 +5,11 @@ import motor.motor_asyncio
 from motor.motor_gridfs import AgnosticGridFSBucket
 from gridfs.errors import NoFile
 from bson import ObjectId
-from typing import Optional
+from typing import Optional, Mapping, Any
 from typing_extensions import Annotated
 from pydantic.functional_validators import BeforeValidator
 from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -62,11 +63,15 @@ class MongoGridFSConnection:
 
 class MongoRepository(AbstractRepository):
 
-    async def add(self, model: AbstractModel) -> AbstractModel:
+    async def add(self, model: AbstractModel) -> AbstractModel | Mapping[str, Any]:
         async with MongoConnection(model.collection) as collection:
-            new = await collection.insert_one(
-                model.model_dump(by_alias=True, exclude=["id"])
-            )
+            try: 
+                new = await collection.insert_one(
+                    model.model_dump(by_alias=True, exclude=["id"])
+                )
+            except DuplicateKeyError as e:
+                return e.details
+
             created = await collection.find_one(
                 {"_id": new.inserted_id}
             )
