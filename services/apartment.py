@@ -1,4 +1,5 @@
 from typing import Optional
+from fastapi import HTTPException, status
 from ..models import apartments
 from ..models.repository import MongoRepository, GridFSRepository, FileModel
 
@@ -57,8 +58,10 @@ class AparmentService():
         repository = MongoRepository()
         file_repository = GridFSRepository()
         existing = await repository.get(id=id, collection_type=AparmentService.DEFAULT_COLLECTION)
-        if not existing or existing.get("realtor") != user_name:
-            return False
+        if not existing:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg":"Apartment not found"})
+        if existing.get("realtor") != user_name:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"msg":"You can't delete an apartment that you don't own"})
         apartment = apartments.ApartmentInDB(**existing)
         image_delete = await file_repository.delete(apartment.image_id)
         apartment_delete = await repository.delete(id, AparmentService.DEFAULT_COLLECTION)

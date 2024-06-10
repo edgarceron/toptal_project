@@ -9,8 +9,6 @@ from .services.users import UserService
 from .services.apartment import AparmentService
 from .security.auth import Auth
 
-
-MONGODB_URL = "mongodb://root:example@127.0.0.1:27017"
 app = FastAPI()
 
 @app.put("/apartments")
@@ -90,19 +88,19 @@ async def delete_apatment(
     current_user: Annotated[UserModel, Depends(Auth.get_current_active_user)],
     id: str,
 ):
-    if current_user is not None:
+    if current_user is not None and current_user.user_type == UserType.realtor:
         delete_result = await AparmentService.delete_apartment(id, current_user.user_name)
         if delete_result:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only authenticated users could see apartments"
+            detail="Only authenticated realtor users could delete apartments"
         )
 
 @app.post(
     "/user/",
-    response_description="Add new student",
+    response_description="Add new user",
     response_model=UserModel,
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,

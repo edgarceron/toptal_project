@@ -1,3 +1,4 @@
+import os
 import abc
 from uuid import uuid4
 from pydantic import BaseModel, Field
@@ -34,9 +35,9 @@ class AbstractRepository(abc.ABC):
 
 
 
-class MongoConnection:
-    MONGODB_URL = "mongodb://root:example@127.0.0.1:27017"        
+class MongoConnection:  
     def __init__(self, collection):
+        self.MONGODB_URL = os.getenv('MONGODB_URL', "mongodb://root:example@127.0.0.1:27017")
         self.client = motor.motor_asyncio.AsyncIOMotorClient(self.MONGODB_URL)
         self.db = self.client.get_database("renting")
         self.collection = self.db.get_collection(collection)
@@ -48,8 +49,8 @@ class MongoConnection:
         self.client.close()
 
 class MongoGridFSConnection:
-    MONGODB_URL = "mongodb://root:example@127.0.0.1:27017"        
     def __init__(self):
+        self.MONGODB_URL = os.getenv('MONGODB_URL', "mongodb://root:example@127.0.0.1:27017")
         self.client = motor.motor_asyncio.AsyncIOMotorClient(self.MONGODB_URL)
         self.db = self.client.get_database("images")
     
